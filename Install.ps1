@@ -139,7 +139,7 @@ try {
     Write-Host 'Start Sons of the Forest, then:'
     Write-Host '  1. Check that MODS appears on the main menu and lists FlyCart'
     Write-Host '  2. Load into a game and get in a golf cart'
-    Write-Host '  3. Open the console and run: flycart on'
+    Write-Host '  3. Sit in the driver seat and press Space to take off'
     Write-Host ''
     Write-Host 'To uninstall, run this script again with -Remove'
     Write-Host ''

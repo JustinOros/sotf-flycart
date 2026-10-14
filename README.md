@@ -33,19 +33,20 @@ Mods\FlyCart\manifest.json
 
 ## Usage
 
-Sit in a golf cart, open the console and run `flycart on`. Run `flycart off` to land.
+Sit in the driver seat of a golf cart and press Space to take off. Leave the
+cart or hold Left Ctrl near the ground to land.
 
 | Key | Action |
 | --- | --- |
 | W / S | Forward / back |
 | A / D | Turn |
-| Space | Up |
-| Left Ctrl | Down |
+| Space | Take off, then up |
+| Left Ctrl | Down, and land when near the ground |
 
 | Command | Action |
 | --- | --- |
-| `flycart on` | Start flying the cart you are sitting in |
-| `flycart off` | Land and restore normal driving |
+| `flycart on` | Enable Space takeoff (on by default) |
+| `flycart off` | Land and disable Space takeoff |
 | `flycartspeed 22 10 70` | Set forward speed, climb speed and turn rate |
 | `flycartdump` | Write the cart's objects and components to `UserData\FlyCartDump.txt` |
 

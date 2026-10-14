@@ -15,6 +15,8 @@ public class FlyCart : SonsMod
 {
     const float SearchInterval = 0.5f;
     const float SearchRadius = 2.5f;
+    const float SeatRadius = 0.8f;
+    const float LandRayLength = 2f;
 
     static FlyCart _instance;
 
@@ -22,7 +24,9 @@ public class FlyCart : SonsMod
     Rigidbody _body;
     readonly List<WheelCollider> _wheels = new();
 
+    bool _enabled = true;
     bool _flying;
+    bool _driver;
     float _searchTimer;
     bool _inputFailed;
 
@@ -46,7 +50,7 @@ public class FlyCart : SonsMod
 
     protected override void OnSdkInitialized()
     {
-        RLog.Msg("FlyCart 1.0.0 loaded. Sit in a golf cart and use the console commands: flycart on, flycart off. Others: flycartspeed, flycartdump");
+        RLog.Msg("FlyCart 1.1.0 loaded. Sit in the driver seat of a golf cart and press Space to fly. Console: flycart on, flycart off, flycartspeed, flycartdump");
     }
 
     protected override void OnGameStart()
@@ -56,7 +60,11 @@ public class FlyCart : SonsMod
 
     void Tick()
     {
-        if (!_flying) return;
+        if (!_flying)
+        {
+            if (_enabled) WatchForLaunch();
+            return;
+        }
 
         if (LocalPlayer.Transform == null || _body == null || !IsInCart(_body))
         {
@@ -64,7 +72,103 @@ public class FlyCart : SonsMod
             return;
         }
 
+        if (HeldKey(KeyCode.LeftControl) && Grounded())
+        {
+            StopFlying();
+            return;
+        }
+
         Fly(Time.deltaTime);
+    }
+
+    void WatchForLaunch()
+    {
+        if (LocalPlayer.Transform == null)
+        {
+            _driver = false;
+            return;
+        }
+
+        _searchTimer -= Time.deltaTime;
+        if (_searchTimer <= 0f)
+        {
+            _searchTimer = SearchInterval;
+            _driver = FindCart() && IsDriver();
+        }
+
+        if (!_driver) return;
+        if (_body == null || !IsInCart(_body))
+        {
+            _driver = false;
+            return;
+        }
+
+        if (PressedKey(KeyCode.Space)) Launch();
+    }
+
+    bool PressedKey(KeyCode key)
+    {
+        try
+        {
+            return Input.GetKeyDown(key);
+        }
+        catch (Exception e)
+        {
+            ReportInputFailure(e);
+            return false;
+        }
+    }
+
+    bool HeldKey(KeyCode key)
+    {
+        try
+        {
+            return Input.GetKey(key);
+        }
+        catch (Exception e)
+        {
+            ReportInputFailure(e);
+            return false;
+        }
+    }
+
+    void ReportInputFailure(Exception e)
+    {
+        if (_inputFailed) return;
+        _inputFailed = true;
+        RLog.Error("FlyCart: input read failed: " + e.Message);
+    }
+
+    bool IsDriver()
+    {
+        var player = LocalPlayer.Transform;
+        var root = _body.transform.root;
+        var driver = root.Find("PlayerDriverLocator");
+        if (driver == null) return false;
+
+        var driverDist = Vector3.Distance(player.position, driver.position);
+        if (driverDist > SeatRadius && !player.IsChildOf(root)) return false;
+
+        foreach (var name in new[] { "PlayerPassengerALocator", "PlayerPassengerBLocator", "PlayerPassengerCLocator" })
+        {
+            var seat = root.Find(name);
+            if (seat != null && Vector3.Distance(player.position, seat.position) < driverDist) return false;
+        }
+
+        return true;
+    }
+
+    bool Grounded()
+    {
+        var root = _body.transform.root;
+        foreach (var hit in Physics.RaycastAll(_body.position + Vector3.up * 0.5f, Vector3.down, LandRayLength, ~0, QueryTriggerInteraction.Ignore))
+        {
+            var col = hit.collider;
+            if (col == null || col.transform.IsChildOf(root)) continue;
+            if (col.TryCast<CharacterController>() != null) continue;
+            return true;
+        }
+        return false;
     }
 
     bool FindCart()
@@ -109,11 +213,16 @@ public class FlyCart : SonsMod
 
     void StartFlying()
     {
-        if (!FindCart())
+        if (!FindCart() || !IsDriver())
         {
-            RLog.Msg("FlyCart: sit in a golf cart first");
+            RLog.Msg("FlyCart: sit in the driver seat of a golf cart first");
             return;
         }
+        Launch();
+    }
+
+    void Launch()
+    {
 
         _wheels.Clear();
         foreach (var w in _body.transform.root.GetComponentsInChildren<WheelCollider>(true))
@@ -133,7 +242,7 @@ public class FlyCart : SonsMod
         foreach (var w in _wheels) w.enabled = false;
 
         _flying = true;
-        RLog.Msg($"FlyCart on. W/S forward and back, A/D turn, Space up, Left Ctrl down. Wheels={_wheels.Count}");
+        RLog.Msg($"FlyCart flying. W/S forward and back, A/D turn, Space up, Left Ctrl down (hold Ctrl near the ground to land). Wheels={_wheels.Count}");
     }
 
     void StopFlying()
@@ -162,23 +271,12 @@ public class FlyCart : SonsMod
     void Fly(float dt)
     {
         float fwd = 0f, turn = 0f, vert = 0f;
-        try
-        {
-            if (Input.GetKey(KeyCode.W)) fwd += 1f;
-            if (Input.GetKey(KeyCode.S)) fwd -= 1f;
-            if (Input.GetKey(KeyCode.D)) turn += 1f;
-            if (Input.GetKey(KeyCode.A)) turn -= 1f;
-            if (Input.GetKey(KeyCode.Space)) vert += 1f;
-            if (Input.GetKey(KeyCode.LeftControl)) vert -= 1f;
-        }
-        catch (Exception e)
-        {
-            if (!_inputFailed)
-            {
-                _inputFailed = true;
-                RLog.Error("FlyCart: input read failed: " + e.Message);
-            }
-        }
+        if (HeldKey(KeyCode.W)) fwd += 1f;
+        if (HeldKey(KeyCode.S)) fwd -= 1f;
+        if (HeldKey(KeyCode.D)) turn += 1f;
+        if (HeldKey(KeyCode.A)) turn -= 1f;
+        if (HeldKey(KeyCode.Space)) vert += 1f;
+        if (HeldKey(KeyCode.LeftControl)) vert -= 1f;
 
         _yaw += turn * _turn * dt;
 
@@ -203,17 +301,18 @@ public class FlyCart : SonsMod
         var arg = (args ?? "").Trim().ToLowerInvariant();
         if (arg == "on")
         {
-            if (_flying) RLog.Msg("FlyCart is already on");
-            else StartFlying();
+            _enabled = true;
+            RLog.Msg("FlyCart enabled: press Space in the driver seat to fly");
             return;
         }
         if (arg == "off")
         {
+            _enabled = false;
             if (_flying) StopFlying();
-            else RLog.Msg("FlyCart is already off");
+            RLog.Msg("FlyCart disabled");
             return;
         }
-        RLog.Msg($"flycart <on|off>  current: {(_flying ? "on" : "off")}");
+        RLog.Msg($"flycart <on|off>  current: {(_enabled ? "on" : "off")}, {(_flying ? "flying" : "grounded")}");
     }
 
     [DebugCommand("flycartspeed")]
