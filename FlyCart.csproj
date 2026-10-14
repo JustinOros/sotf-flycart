@@ -1,0 +1,37 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net6</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <LangVersion>latest</LangVersion>
+        <AssemblyName>FlyCart</AssemblyName>
+        <RootNamespace>FlyCart</RootNamespace>
+        <Version>1.0.0</Version>
+        <NoWarn>CS0436;CS1701;CS1702;MSB3277;MSB3106</NoWarn>
+    </PropertyGroup>
+
+    <PropertyGroup Condition="'$(GameDir)' == ''">
+        <GameDir>$(SOTF_PATH)</GameDir>
+    </PropertyGroup>
+
+    <Target Name="CheckGameDir" BeforeTargets="BeforeBuild">
+        <Error Condition="'$(GameDir)' == ''"
+               Text="GameDir is not set. Run build.ps1, pass -p:GameDir=&quot;path&quot;, or set SOTF_PATH." />
+        <Error Condition="!Exists('$(GameDir)\_RedLoader\Game\Sons.dll')"
+               Text="No RedLoader interop assemblies at $(GameDir)\_RedLoader\Game. Install RedLoader and launch the game once." />
+    </Target>
+
+    <ItemGroup>
+        <Reference Include="$(GameDir)\_RedLoader\Game\*.dll" Private="false" />
+        <Reference Include="$(GameDir)\_RedLoader\net6\RedLoader.dll" Private="false" />
+        <Reference Include="$(GameDir)\_RedLoader\net6\SonsSdk.dll" Private="false" />
+        <Reference Include="$(GameDir)\_RedLoader\net6\Il2CppInterop.Runtime.dll" Private="false" />
+        <Reference Include="$(GameDir)\_RedLoader\net6\Il2CppInterop.Common.dll" Private="false" />
+        <Reference Include="$(GameDir)\_RedLoader\net6\0Harmony.dll" Private="false" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <EmbeddedResource Include="manifest.json" />
+    </ItemGroup>
+
+</Project>

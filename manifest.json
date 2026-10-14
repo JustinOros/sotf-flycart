@@ -1,0 +1,11 @@
+{
+  "$schema": "https://raw.githubusercontent.com/ToniMacaroni/RedLoader/main/MetadataSchema.json",
+  "id": "FlyCart",
+  "name": "FlyCart",
+  "author": "JustinOros",
+  "version": "1.0.0",
+  "description": "Turns the golf cart into a flying vehicle",
+  "gameVersion": "1.0.0",
+  "platform": "Client",
+  "type": "Mod"
+}
